@@ -1,0 +1,140 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>模拟VUE</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <style>
+        body{font-size: 18px;}
+    </style>
+</head>
+<body>
+<div class="container-fluid" style="display: flex;flex-direction: column; justify-content: center;width: 100%;height: 100%;position: fixed;background: #e3e3e3;">
+<div class="row">
+    <div class="col-md-12">
+        <div class="wapper">
+            <form class="form">
+                <div class="form-group">
+                    <label for="sum1">数字1</label>
+                    <input type="number" class="form-control" id="sum1" name="sum1" value="" placeholder="数字1" oninput="inputChanged(this)">
+                </div>
+
+                <div class="form-group">
+                    <label for="sum2">数字2</label>
+                    <input type="number" class="form-control" id="sum2" name="sum2" value="" placeholder="数字2" oninput="inputChanged(this)">
+                </div>
+                <div class="form-group">
+                    <label for="content">结果和</label>
+                    <div class="btn btn-primary btn-block" id="content">{{ sum1 + sum2 }}</div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+</div>
+<script>
+    var obj = {
+        instance:null,
+        datas:{ },
+        _vmDom:null,
+        _vmDomText:'',
+        _vmModels:[],
+        init(options){
+            this._vmDom = document.getElementById(options.id);
+            //通过浅拷贝
+            this.datas = Object.assign({},this.datas,options.datas);
+            this._vmDomText   =   this._vmDom.innerHTML.replace(/\s+/g,"");//去掉空格
+            this._initDateListner(this);
+            this._initModels(this);
+            this.render();
+            return this;
+        },
+        render(){
+            // '<div id="content2">{{sum1-sum2}}</div>';
+            var substr = this._vmDomText.match(/\{\{(.*)\}\}/);
+            var arr=substr[1].split(/\||\*|\s+|\+|\/|-/);
+            console.log(substr,arr);
+            // eval("var sum1 = parseInt(this.instance['sum1']) ;");
+            // 循环赋值变量,或者这里可以使用new Function方式; 两种方式,方式一拼接字符串使用eval,方式而Function方法
+            //  let evalStr ='';
+            //  for(var i=0;i<arr.length;i++){
+            //      evalStr+= "var "+arr[i]+" = parseInt(this.datas['"+arr[i]+"']) ;"
+            //  }
+            //  evalStr += " var total = "+substr[1]+";";
+            //  eval(evalStr);
+            // this._vmDom.innerText = total;
+             let _fun = new Function(...arr,"return "+substr[1] +";");
+             let _params = [];
+             // 把sum1,sum2传入数组,方便apply调用
+             for(var i=0;i<arr.length;i++){
+                 _params.push(parseFloat(this.datas[arr[i]]));
+             }
+             //let ret = _fun(parseInt(this.datas['sum1']),parseInt(this.datas['sum2']));
+             console.log(_params)
+             let ret2 = _fun(..._params);
+             console.log(this.datas,ret2);
+             this._vmDom.innerText = ret2.toFixed(2);
+             //这里对比model模型,值是否一样,如果不一样,需要改变
+             let vmModels = this._vmModels;
+             for(let i=0;i<vmModels.length;i++){
+                 let domName = vmModels[i]; // sum1,sum2
+                 if(document.getElementById(domName).value != this.datas[domName]){
+                     document.getElementById(domName).value = this.datas[domName];
+                 }
+             }
+        },
+        _initDateListner(object){
+            function descripterFun(key) {
+                return {
+                    enumerable: true,
+                    get: function () {
+                        return object.datas[key]||'';
+                    },
+                    set: function (newvalue) {
+                        object.datas[key] = newvalue?newvalue:0;
+                        object.render();
+                    },
+                    default:0
+                }
+            }
+
+            let objInstance = object.datas;
+            for(let key in objInstance){
+                console.log(key)
+                Object.defineProperty(object, key, descripterFun(key));
+            }
+        },
+        _initModels(obj){
+            //注册model组件的事件,当模型改变时,改变dom的值;
+            obj._vmModels.push('sum1');
+            obj._vmModels.push('sum2');
+        }
+    };
+
+
+    var myVue = obj.init( {
+        "id":"content",
+        "datas":{
+            sum1:0,
+            sum2:0
+        }
+    });
+
+
+ function inputChanged(dom) {
+     console.log(dom.attributes.name.value)
+     let attrName = dom.attributes.name.value;
+     let event = arguments.callee.caller.arguments[0];
+     myVue[attrName] = event.target.value;
+     //获取函数的参数arguments.callee.caller函数调用者
+     //console.log(arguments.callee.caller.arguments)
+     // console.log(arguments.callee)
+     // console.log(inputChanged.caller)
+     // console.log(funInstance.apply(this,[1]));
+ }
+ 
+
+</script>
+</body>
+</html>
